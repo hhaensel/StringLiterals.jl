@@ -317,8 +317,8 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
         if c == '\\' && !done(s, k)
             if s[k] == '('
                 # Handle interpolation
-                isempty(s[i:j-1]) ||
-                    push!(sx, unescape(s[i:j-1]))
+                isempty(s[i:prevind(s, j)]) ||
+                    push!(sx, unescape(s[i:prevind(s, j)]))
                 ex, j = _parse(s, k, greedy=false)
                 isa(ex, Expr) && (ex.head === :continue) &&
                     throw(_ParseError("Incomplete expression"))
@@ -329,15 +329,15 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
                 c, k = next(s, k)
                 done(s, k) && throw(_ParseError("Incomplete % expression"))
                 # Handle interpolation
-                if !isempty(s[i:j-1])
-                    push!(sx, unescape(s[i:j-1]))
+                if !isempty(s[i:prevind(s, j)])
+                    push!(sx, unescape(s[i:prevind(s, j)]))
                 end
                 if s[k] == '('
                     # Need to find end to parse to
                     _, j = _parse(s, k, greedy=false)
                     # This is a bit hacky, and probably doesn't perform as well as it could,
                     # but it works! Same below.
-                    str = string("(StringLiterals.fmt", s[k:j-1], ')')
+                    str = string("(StringLiterals.fmt", s[k:prevind(s, j)], ')')
                 else
                     # Move past %, c should point to letter
                     beg = k
@@ -348,7 +348,7 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
                         s[k] == '(' && break
                     end
                     _, j = _parse(s, k, greedy=false)
-                    str = string("(StringLiterals.cfmt(\"", s[beg-1:k-1], "\",", s[k+1:j-1], ')')
+                    str = string("(StringLiterals.cfmt(\"", s[prevind(s,beg):prevind(s,k)], "\",", s[nextind(s,k):prevind(s,j)], ')')
                 end
                 ex, _ = _parse(str, 1, greedy=false)
                 isa(ex, Expr) && (ex.head === :continue) &&
@@ -361,8 +361,8 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
                 done(s, k) &&
                     throw(_ParseError("Incomplete {...} Python format expression"))
                 # Handle interpolation
-                isempty(s[i:j-1]) ||
-                    push!(sx, unescape(s[i:j-1]))
+                isempty(s[i:prevind(s, j)]) ||
+                    push!(sx, unescape(s[i:prevind(s, j)]))
                 beg = k # start location
                 c, k = next(s, k)
                 while c != '}'
@@ -379,15 +379,15 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
                 _, j = _parse(s, k-1, greedy=false)
                 # This is a bit hacky, and probably doesn't perform as well as it could,
                 # but it works! Same below.
-                str = string("(StringLiterals.pyfmt(\"", s[beg:k-3], "\",", s[k:j-1], ')')
+                str = string("(StringLiterals.pyfmt(\"", s[beg:prevind(s, k, 3)], "\",", s[k:prevind(s, j)], ')')
                 ex, _ = _parse(str, 1, greedy=false)
                 isa(ex, Expr) && (ex.head === :continue) &&
                     throw(_ParseError("Incomplete expression"))
                 push!(sx, esc(ex))
                 i = j
             elseif flg && s[k] == '$'
-                isempty(s[i:j-1]) ||
-                    push!(sx, unescape(s[i:j-1]))
+                isempty(s[i:prevind(s, j)]) ||
+                    push!(sx, unescape(s[i:prevind(s, j)]))
                 i = k
                 # Move past \\, c should point to '$'
                 c, j = next(s, k)
@@ -395,8 +395,8 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
                 j = k
             end
         elseif flg && c == '$'
-            isempty(s[i:j-1]) ||
-                push!(sx, unescape(s[i:j-1]))
+            isempty(s[i:prevind(s, j)]) ||
+                push!(sx, unescape(s[i:prevind(s, j)]))
             ex, j = _parse(s, k, greedy=false)
             isa(ex,Expr) && ex.head === :continue &&
                 throw(_ParseError("incomplete expression"))
@@ -407,7 +407,7 @@ function s_interp_parse_vec(flg::Bool, s::AbstractString, unescape::Function)
         end
     end
     isempty(s[i:end]) ||
-        push!(sx, unescape(s[i:j-1]))
+        push!(sx, unescape(s[i:end]))
     sx
 end
 
